@@ -14,19 +14,75 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="app">
-      <!-- Ambient backdrop -->
-      <div class="bg-orbs" aria-hidden="true">
-        <span></span><span></span><span></span>
-      </div>
+    <!-- Ambient backdrop (shared) -->
+    <div class="bg-orbs" aria-hidden="true">
+      <span></span><span></span><span></span>
+    </div>
 
+    <!-- Main / start screen -->
+    <div id="main-screen" class="main-screen">
+      <div class="hero">
+        <div class="hero-mark">♠ ♥ ♦ ♣</div>
+        <h1 class="hero-title">21 Card Poker</h1>
+        <p class="hero-tagline">A 21-card duel of wits — bluff, draw, win the pot.</p>
+
+        <div class="menu-card">
+          <div class="menu-section">
+            <div class="menu-label">Difficulty</div>
+            <div class="seg" role="tablist" id="difficulty-seg">
+              <button class="seg-btn" data-val="easy" type="button">
+                <span class="seg-title">Easy</span>
+                <span class="seg-sub">Loose & predictable</span>
+              </button>
+              <button class="seg-btn active" data-val="medium" type="button">
+                <span class="seg-title">Medium</span>
+                <span class="seg-sub">Balanced AI</span>
+              </button>
+              <button class="seg-btn" data-val="hard" type="button">
+                <span class="seg-title">Hard</span>
+                <span class="seg-sub">Aggressive bluffer</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="menu-section">
+            <div class="menu-label">Starting Chips</div>
+            <div class="seg" id="chips-seg">
+              <button class="seg-btn" data-val="25" type="button"><span class="seg-title">25b</span></button>
+              <button class="seg-btn active" data-val="50" type="button"><span class="seg-title">50b</span></button>
+              <button class="seg-btn" data-val="100" type="button"><span class="seg-title">100b</span></button>
+            </div>
+          </div>
+
+          <div class="menu-section row">
+            <label class="toggle">
+              <input type="checkbox" id="sound-toggle" checked />
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              <span class="toggle-label">Sound FX</span>
+            </label>
+          </div>
+
+          <div class="menu-actions">
+            <button id="start-btn" class="primary-btn xl" type="button">Start Game</button>
+            <button id="hero-rules-btn" class="ghost-btn" type="button">How to Play</button>
+          </div>
+        </div>
+
+        <div class="hero-footer">v1.0 · Made for the web</div>
+      </div>
+    </div>
+
+    <div class="app hidden" id="app-root">
       <header class="topbar">
         <div class="brand">
           <span class="brand-mark">♠</span>
           <span class="brand-name">21 Card Poker</span>
         </div>
         <div class="topbar-actions">
+          <button id="sound-btn" class="ghost-btn icon-btn" type="button" title="Toggle sound" aria-label="Toggle sound">🔊</button>
+          <span id="diff-badge" class="role-pill" style="background:rgba(34,211,238,0.15);border-color:rgba(34,211,238,0.35);color:#a5f3fc">Medium</span>
           <button id="rules-btn" class="ghost-btn" type="button">Rules</button>
+          <button id="menu-btn" class="ghost-btn" type="button">Menu</button>
           <button id="new-game-btn" class="ghost-btn" type="button">New Game</button>
         </div>
       </header>
