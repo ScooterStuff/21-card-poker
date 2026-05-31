@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <meta name="theme-color" content="#0b0f1a" />
+    <title>21 Card Poker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- Ambient backdrop -->
+      <div class="bg-orbs" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">♠</span>
+          <span class="brand-name">21 Card Poker</span>
+        </div>
+        <div class="topbar-actions">
+          <button id="rules-btn" class="ghost-btn" type="button">Rules</button>
+          <button id="new-game-btn" class="ghost-btn" type="button">New Game</button>
+        </div>
+      </header>
+
+      <main class="table">
+        <!-- Opponent area -->
+        <section class="seat opponent" aria-label="Opponent">
+          <div class="seat-head">
+            <div class="avatar">AI</div>
+            <div class="seat-info">
+              <div class="seat-name">Opponent <span id="opp-role" class="role-pill"></span></div>
+              <div class="seat-chips"><span id="opp-chips">50</span> <em>chips</em></div>
+            </div>
+            <div class="seat-bet" id="opp-bet">0b</div>
+          </div>
+          <div class="hand opponent-hand" id="opp-hand"></div>
+        </section>
+
+        <!-- Center: pot, message, log -->
+        <section class="center">
+          <div class="pot-wrap">
+            <div class="pot-label">POT</div>
+            <div class="pot-value"><span id="pot">0</span><em>b</em></div>
+            <div class="round-pill">Round <span id="round-num">0</span></div>
+          </div>
+          <div id="status-msg" class="status-msg">Press New Game to begin.</div>
+          <div id="log" class="log" aria-live="polite"></div>
+        </section>
+
+        <!-- Player area -->
+        <section class="seat player" aria-label="You">
+          <div class="hand player-hand" id="my-hand"></div>
+          <div class="seat-head bottom">
+            <div class="avatar you">YOU</div>
+            <div class="seat-info">
+              <div class="seat-name">You <span id="my-role" class="role-pill"></span></div>
+              <div class="seat-chips"><span id="my-chips">50</span> <em>chips</em></div>
+            </div>
+            <div class="seat-bet" id="my-bet">0b</div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Action bar -->
+      <footer class="actionbar" id="actionbar">
+        <div class="actions" id="actions"></div>
+        <div class="raise-controls" id="raise-controls" hidden>
+          <input
+            type="range"
+            id="raise-slider"
+            min="1"
+            max="10"
+            value="1"
+            step="1"
+            aria-label="Raise amount"
+          />
+          <div class="raise-value">
+            <span>+</span><span id="raise-value">1</span><em>b</em>
+          </div>
+          <button id="confirm-raise" class="primary-btn" type="button">Confirm Raise</button>
+          <button id="cancel-raise" class="ghost-btn" type="button">Cancel</button>
+        </div>
+        <div class="discard-controls" id="discard-controls" hidden>
+          <span class="hint" id="discard-hint">Tap cards to discard, then confirm.</span>
+          <button id="confirm-discard" class="primary-btn" type="button">Confirm Discard (<span id="discard-count">0</span>)</button>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Showdown / Round Over modal -->
+    <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <h2 id="modal-title">Round</h2>
+        <div id="modal-body" class="modal-body"></div>
+        <div class="modal-actions">
+          <button id="modal-primary" class="primary-btn" type="button">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rules modal -->
+    <div id="rules-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-card wide">
+        <h2>How to Play</h2>
+        <div class="modal-body small">
+          <p><b>Deck:</b> 20 cards (A,K,Q,J,10 in 4 suits) + 1 Joker (wild).</p>
+          <p><b>Roles:</b> Each round one player is <b>Starter (S)</b>, the other <b>Follower (F)</b>. Roles swap every round.</p>
+          <p><b>Forced bets:</b> S posts 2b, F posts 1b.</p>
+          <p><b>Pre-draw:</b> F acts first — Call, Raise, or Fold.</p>
+          <p><b>Draw:</b> F discards 0–5 cards and draws replacements; S sees the count, then does the same.</p>
+          <p><b>Post-draw:</b> S acts first — Check, Raise, Call, or Fold.</p>
+          <p><b>Showdown:</b> Best 5-card hand wins. Joker becomes whichever card maximizes the holder's hand.</p>
+          <p><b>Hand ranks (high → low):</b> Five of a Kind → Royal Flush → Four of a Kind → Full House → Straight → Three of a Kind → Two Pair → Pair.</p>
+        </div>
+        <div class="modal-actions">
+          <button id="rules-close" class="primary-btn" type="button">Got it</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
