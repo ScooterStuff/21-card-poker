@@ -3,12 +3,15 @@
 import { GameEngine, Phase, Action } from "./game.js";
 import { evaluatePlayerHand } from "./hand_eval.js";
 import { AIPlayer } from "./ai.js";
+import { sound } from "./sound.js";
 
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const engine = new GameEngine(1, 50);
-const ai = new AIPlayer();
+let engine = new GameEngine(1, 50);
+let ai = new AIPlayer("medium");
+let difficulty = "medium";
+let startingChips = 50;
 
 let selectedDiscards = new Set();
 let drawPlayer = null; // which player is currently choosing to discard (only relevant for human)
@@ -208,6 +211,11 @@ async function onPlayerAction(act) {
 
 async function doAction(act, raiseAmt) {
   const msg = engine.applyAction(act, raiseAmt);
+  // SFX
+  if (act === Action.FOLD) sound.fold();
+  else if (act === Action.CHECK) sound.check();
+  else if (act === Action.CALL) sound.call();
+  else if (act === Action.RAISE) sound.raise();
   pushLog(msg);
   setStatus(msg);
   render();
@@ -223,6 +231,7 @@ $("confirm-discard").addEventListener("click", async () => {
   if (s.drawSubPhase === "follower_draw") s.followerDiscarded = count;
   else s.starterDiscarded = count;
   selectedDiscards.clear();
+  if (count > 0) sound.deal();
   pushLog(`You discarded ${count} card${count === 1 ? "" : "s"}.`);
   setStatus(`You discarded ${count}.`);
   render();
@@ -254,10 +263,6 @@ async function advanceTurn() {
     if (s.currentActor === s.player1) {
       const role = s.follower === s.player1 ? "Follower" : "Starter";
       setStatus(`Your turn to draw (${role}). Select cards to discard.`);
-      // Show how many opponent already discarded if applicable
-      if (s.drawSubPhase === "starter_draw" && s.starter === s.player1 && s.followerDiscarded >= 0) {
-        pushLog(`Opponent (Follower) discarded ${s.followerDiscarded} card${s.followerDiscarded === 1 ? "" : "s"}.`);
-      }
       return;
     } else {
       // AI draws
@@ -269,6 +274,7 @@ async function advanceTurn() {
       if (s.drawSubPhase === "follower_draw") s.followerDiscarded = count;
       else s.starterDiscarded = count;
       pushLog(`Opponent discarded ${count} card${count === 1 ? "" : "s"}.`);
+      if (count > 0) sound.deal();
       render();
       await sleep(500);
       engine.advanceDraw();
@@ -289,6 +295,10 @@ async function advanceTurn() {
       const avail = engine.getAvailableActions();
       const [act, amt] = ai.chooseAction(s, avail);
       const msg = engine.applyAction(act, amt);
+      if (act === Action.FOLD) sound.fold();
+      else if (act === Action.CHECK) sound.check();
+      else if (act === Action.CALL) sound.call();
+      else if (act === Action.RAISE) sound.raise();
       pushLog(msg);
       setStatus(msg);
       render();
@@ -334,6 +344,10 @@ async function runShowdown() {
   }
   s.pot = 0;
   s.phase = Phase.ROUND_OVER;
+
+  if (result > 0) sound.win();
+  else if (result < 0) sound.lose();
+  else sound.tie();
 
   render();
   await sleep(300);
@@ -387,6 +401,10 @@ async function showRoundOver() {
     win === s.player1 ? "result-win" : win === s.player2 ? "result-lose" : "result-tie";
   const title =
     win === s.player1 ? "You won the pot." : win === s.player2 ? "Opponent won the pot." : "Pot split.";
+
+  if (win === s.player1) sound.win();
+  else if (win === s.player2) sound.lose();
+  else sound.tie();
 
   const body = document.createElement("div");
   body.innerHTML = `<p style="text-align:center">${s.winnerReason}</p>`;
@@ -450,15 +468,122 @@ $("rules-close").addEventListener("click", () => $("rules-modal").classList.add(
 
 // New game
 function startNewGame() {
+  engine = new GameEngine(1, startingChips);
+  ai = new AIPlayer(difficulty);
   engine.newGame();
   engine.startRound();
   selectedDiscards.clear();
   render();
   setStatus("New game — pre-draw betting begins.");
   pushLog(`Round 1 dealt. ${engine.state.starter.name} posts 2b, ${engine.state.follower.name} posts 1b.`);
+  sound.deal();
   advanceTurn();
 }
-$("new-game-btn").addEventListener("click", startNewGame);
+$("new-game-btn").addEventListener("click", () => {
+  sound.click();
+  startNewGame();
+});
 
-// Boot
-startNewGame();
+// ── Main screen / settings ───────────────────────────────────────
+
+function bindSegmented(rootId, onChange) {
+  const root = $(rootId);
+  root.querySelectorAll(".seg-btn").forEach((b) => {
+    b.addEventListener("click", () => {
+      root.querySelectorAll(".seg-btn").forEach((x) => x.classList.remove("active"));
+      b.classList.add("active");
+      sound.click();
+      onChange(b.dataset.val);
+    });
+  });
+}
+
+function applyDifficultyBadge() {
+  const badge = $("diff-badge");
+  if (!badge) return;
+  badge.textContent = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+}
+
+function updateSoundIcon() {
+  const btn = $("sound-btn");
+  if (!btn) return;
+  btn.textContent = sound.enabled ? "🔊" : "🔇";
+  const cb = $("sound-toggle");
+  if (cb) cb.checked = sound.enabled;
+}
+
+function showMainScreen() {
+  $("main-screen").classList.remove("hidden");
+  $("app-root").classList.add("hidden");
+}
+function hideMainScreen() {
+  $("main-screen").classList.add("hidden");
+  $("app-root").classList.remove("hidden");
+}
+
+bindSegmented("difficulty-seg", (val) => {
+  difficulty = val;
+  applyDifficultyBadge();
+  try { localStorage.setItem("poker.difficulty", val); } catch {}
+});
+bindSegmented("chips-seg", (val) => {
+  startingChips = parseInt(val, 10);
+  try { localStorage.setItem("poker.chips", val); } catch {}
+});
+
+$("sound-toggle").addEventListener("change", (e) => {
+  sound.setEnabled(e.target.checked);
+  if (sound.enabled) sound.click();
+  updateSoundIcon();
+});
+$("sound-btn").addEventListener("click", () => {
+  sound.setEnabled(!sound.enabled);
+  if (sound.enabled) sound.click();
+  updateSoundIcon();
+});
+
+$("start-btn").addEventListener("click", () => {
+  sound.resume();
+  sound.start();
+  hideMainScreen();
+  applyDifficultyBadge();
+  startNewGame();
+});
+
+$("menu-btn").addEventListener("click", () => {
+  sound.click();
+  showMainScreen();
+});
+
+$("hero-rules-btn").addEventListener("click", () => {
+  sound.click();
+  $("rules-modal").classList.remove("hidden");
+});
+
+// Restore prefs
+(function restorePrefs() {
+  try {
+    const d = localStorage.getItem("poker.difficulty");
+    if (d) {
+      difficulty = d;
+      const root = $("difficulty-seg");
+      root.querySelectorAll(".seg-btn").forEach((b) => {
+        b.classList.toggle("active", b.dataset.val === d);
+      });
+    }
+    const c = localStorage.getItem("poker.chips");
+    if (c) {
+      startingChips = parseInt(c, 10);
+      const root = $("chips-seg");
+      root.querySelectorAll(".seg-btn").forEach((b) => {
+        b.classList.toggle("active", b.dataset.val === c);
+      });
+    }
+  } catch {}
+  sound.loadPref();
+  updateSoundIcon();
+  applyDifficultyBadge();
+})();
+
+// Boot: show main screen, do not auto-start
+showMainScreen();
