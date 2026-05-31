@@ -1,0 +1,9 @@
+Hand Type,Count,Optimal k (mode),Avg Cost k=0,Avg Cost k=1,Avg Cost k=2,Avg Cost k=3,Avg Cost k=4,Avg Cost k=5,Cheapest Bluff k,Avg Cheapest Bluff Cost,% Hands Bluff < 1%
+Five of a Kind,5,0,N/A,0.55,13.53,12.09,11.21,N/A,1,0.55,80.0
+Royal Flush,24,0,N/A,20.04,18.34,17.04,18.03,50.70,3,17.04,0.0
+Four of a Kind,400,1,0.05,0.00,13.83,20.82,19.90,48.30,0,0.05,100.0
+Full House,840,0,N/A,15.84,12.40,26.71,32.06,42.66,2,12.40,0.0
+Straight,2280,0,0.10,20.51,17.39,14.05,13.45,31.50,4,13.45,0.0
+Three of a Kind,4800,2,8.26,1.69,0.91,14.97,12.73,27.04,1,1.69,18.5
+Two Pair,4320,1,15.71,0.59,7.05,2.09,9.39,9.21,3,2.09,34.6
+Pair,7680,3,38.40,15.37,5.69,2.63,7.06,6.61,2,5.69,0.0
