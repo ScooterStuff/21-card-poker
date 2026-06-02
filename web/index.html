@@ -131,14 +131,21 @@
             <div class="round-pill">Round <span id="round-num">0</span></div>
           </div>
           <div id="status-msg" class="status-msg">Press New Game to begin.</div>
+          <div id="log" class="log" aria-live="polite"></div>
+        </section>
+
+        <!-- Side panel: advice + CFR reasoning -->
+        <aside class="side-panel" id="side-panel" aria-label="Advice and AI reasoning">
           <div id="advice-banner" class="advice-banner" hidden></div>
           <div id="cfr-panel" class="cfr-panel" hidden>
             <div class="cfr-panel-head"><span>🤖 CFR reasoning</span><span id="cfr-source" class="cfr-source"></span></div>
             <div id="cfr-bars" class="cfr-bars"></div>
             <div id="cfr-meta" class="cfr-meta"></div>
           </div>
-          <div id="log" class="log" aria-live="polite"></div>
-        </section>
+          <div class="side-panel-empty" id="side-panel-empty">
+            Enable <b>Show advice</b> or <b>Show CFR reasoning</b> from the menu to see hints here.
+          </div>
+        </aside>
 
         <!-- Player area -->
         <section class="seat player" aria-label="You">
