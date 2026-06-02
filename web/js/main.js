@@ -1,8 +1,14 @@
 // 21 Card Poker — UI controller / main entry
 
 import { GameEngine, Phase, Action } from "./game.js";
-import { evaluatePlayerHand } from "./hand_eval.js";
+import { evaluatePlayerHand, HAND_NAMES } from "./hand_eval.js";
 import { AIPlayer } from "./ai.js";
+import {
+  CFRAIPlayer,
+  loadStrategy,
+  getBetAdvice,
+  getDiscardAdvice,
+} from "./cfr_ai.js";
 import { sound } from "./sound.js";
 
 const $ = (id) => document.getElementById(id);
@@ -12,6 +18,15 @@ let engine = new GameEngine(1, 50);
 let ai = new AIPlayer("medium");
 let difficulty = "medium";
 let startingChips = 50;
+
+// Toggle state for advice + CFR reasoning panels.
+let adviceEnabled = false;
+let reasoningEnabled = false;
+// Cached strategy for the human-side advice (loaded lazily).
+let humanStrategy = null;
+// Track raises-this-street for the *human* so advice keys match the trained game.
+let humanRaisesThisStreet = 0;
+let humanLastPhase = null;
 
 let selectedDiscards = new Set();
 let drawPlayer = null; // which player is currently choosing to discard (only relevant for human)
@@ -121,6 +136,130 @@ function pushLog(msg) {
   while (log.childElementCount > 30) log.removeChild(log.lastChild);
 }
 
+// ── CFR insight panel ────────────────────────────────────────────
+
+function hideCfrPanel() {
+  const p = $("cfr-panel");
+  if (p) p.hidden = true;
+}
+
+function renderCfrPanel(decision) {
+  const panel = $("cfr-panel");
+  if (!panel) return;
+  if (!reasoningEnabled || !decision) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  $("cfr-source").textContent =
+    decision.source === "cfr" ? "trained policy" : `fallback: ${decision.source}`;
+
+  const bars = $("cfr-bars");
+  bars.innerHTML = "";
+  decision.labels.forEach((lbl, i) => {
+    const p = decision.probs[i] || 0;
+    const row = document.createElement("div");
+    row.className = "cfr-row";
+    row.innerHTML = `
+      <span class="lbl ${lbl === decision.picked ? "pick" : ""}">${
+      decision.pretty[i]
+    }${lbl === decision.picked ? " ←" : ""}</span>
+      <span class="bar"><span style="width:${(p * 100).toFixed(1)}%"></span></span>
+      <span class="pct">${(p * 100).toFixed(1)}%</span>`;
+    bars.appendChild(row);
+  });
+
+  const meta = $("cfr-meta");
+  const b = decision.handBucket || {};
+  const handLabel = HAND_NAMES[b.cat] || `cat=${b.cat ?? "?"}`;
+  const jokerLabel = b.hasJoker ? " · holds Joker" : "";
+  meta.textContent =
+    decision.kind === "draw"
+      ? `Draw decision · AI hand: ${handLabel}${jokerLabel}`
+      : `Bet decision (${decision.phase}) · AI hand: ${handLabel}${jokerLabel}`;
+}
+
+// ── Advice banner (human side) ───────────────────────────────────
+
+function hideAdviceBanner() {
+  const el = $("advice-banner");
+  if (el) el.hidden = true;
+  document.querySelectorAll(".card.advice-suggest").forEach((el) =>
+    el.classList.remove("advice-suggest"),
+  );
+}
+
+function refreshAdvice() {
+  if (!adviceEnabled) {
+    hideAdviceBanner();
+    return;
+  }
+  const s = engine.state;
+  if (!s) return;
+
+  // Track raises-this-street for the human so the key matches training.
+  if (s.phase !== humanLastPhase) {
+    humanRaisesThisStreet = 0;
+    humanLastPhase = s.phase;
+  }
+
+  if (s.currentActor === s.player1 &&
+      (s.phase === Phase.PRE_DRAW_BET || s.phase === Phase.POST_DRAW_BET)) {
+    const avail = engine.getAvailableActions();
+    const adv = getBetAdvice(s, s.player1, humanRaisesThisStreet, avail, humanStrategy);
+    if (!adv) { hideAdviceBanner(); return; }
+    const banner = $("advice-banner");
+    banner.hidden = false;
+    // Sort options by probability and render the top 3.
+    const ordered = adv.labels
+      .map((lbl, i) => ({ lbl, p: adv.probs[i] || 0, pretty: adv.pretty[i] }))
+      .sort((a, b) => b.p - a.p)
+      .slice(0, 3);
+    const top = ordered[0];
+    const others = ordered.slice(1).filter((o) => o.p > 0.05);
+    const otherTxt = others.length
+      ? ` <span style="color:var(--text-dim)">· ${others.map((o) => `${o.pretty} ${(o.p * 100).toFixed(0)}%`).join(" · ")}</span>`
+      : "";
+    banner.innerHTML = `💡 Suggested: <b>${top.pretty}</b> ${(top.p * 100).toFixed(0)}%${otherTxt}`;
+    return;
+  }
+
+  // Discard advice for the human.
+  const isMyDraw =
+    s.phase === Phase.DRAW &&
+    ((s.drawSubPhase === "follower_draw" && s.follower === s.player1) ||
+      (s.drawSubPhase === "starter_draw" && s.starter === s.player1));
+  if (isMyDraw) {
+    const adv = getDiscardAdvice(s, s.player1, humanStrategy);
+    const banner = $("advice-banner");
+    banner.hidden = false;
+    if (adv.count === 0) {
+      banner.innerHTML = `💡 Suggested: <b>discard nothing</b> — your hand is already strong.`;
+    } else {
+      const cards = adv.indices
+        .map((i) => {
+          const c = s.player1.hand[i];
+          return c.isJoker ? "🃏" : `${c.rank}${c.suit}`;
+        })
+        .join(" ");
+      banner.innerHTML = `💡 Suggested: <b>discard ${adv.count}</b> — ${cards}`;
+    }
+    document.querySelectorAll(".card.advice-suggest").forEach((el) =>
+      el.classList.remove("advice-suggest"),
+    );
+    const myHand = $("my-hand");
+    if (myHand) {
+      adv.indices.forEach((i) => {
+        const el = myHand.children[i];
+        if (el) el.classList.add("advice-suggest");
+      });
+    }
+    return;
+  }
+
+  hideAdviceBanner();
+}
+
 // ── Discard handling ─────────────────────────────────────────────
 
 function toggleDiscard(idx, el) {
@@ -216,6 +355,7 @@ async function doAction(act, raiseAmt) {
   else if (act === Action.CHECK) sound.check();
   else if (act === Action.CALL) sound.call();
   else if (act === Action.RAISE) sound.raise();
+  if (act === Action.RAISE) humanRaisesThisStreet += 1;
   pushLog(msg);
   setStatus(msg);
   render();
@@ -246,6 +386,7 @@ async function advanceTurn() {
   const s = engine.state;
   render();
   renderActions();
+  refreshAdvice();
 
   // Showdown
   if (s.phase === Phase.SHOWDOWN) {
@@ -270,6 +411,7 @@ async function advanceTurn() {
       setStatus(`Opponent (${role}) is drawing…`);
       await sleep(800);
       const idx = ai.chooseDiscards(s);
+      maybeShowAiReasoning();
       const count = engine.doDraw(s.player2, idx);
       if (s.drawSubPhase === "follower_draw") s.followerDiscarded = count;
       else s.starterDiscarded = count;
@@ -294,6 +436,7 @@ async function advanceTurn() {
       await sleep(900);
       const avail = engine.getAvailableActions();
       const [act, amt] = ai.chooseAction(s, avail);
+      maybeShowAiReasoning();
       const msg = engine.applyAction(act, amt);
       if (act === Action.FOLD) sound.fold();
       else if (act === Action.CHECK) sound.check();
@@ -307,6 +450,21 @@ async function advanceTurn() {
       return;
     }
   }
+}
+
+function maybeShowAiReasoning() {
+  if (!reasoningEnabled) return;
+  if (!ai || !ai.lastDecision) {
+    hideCfrPanel();
+    return;
+  }
+  renderCfrPanel(ai.lastDecision);
+  // Also a compact log line.
+  const d = ai.lastDecision;
+  const summary = d.labels
+    .map((lbl, i) => `${d.pretty[i]} ${(d.probs[i] * 100).toFixed(0)}%`)
+    .join(" · ");
+  pushLog(`🤖 ${d.kind === "draw" ? "Discard" : "Bet"}: ${summary} → ${d.pretty[d.labels.indexOf(d.picked)] || d.picked}`);
 }
 
 // ── Showdown / Round over ────────────────────────────────────────
@@ -469,15 +627,31 @@ $("rules-close").addEventListener("click", () => $("rules-modal").classList.add(
 // New game
 function startNewGame() {
   engine = new GameEngine(1, startingChips);
-  ai = new AIPlayer(difficulty);
+  ai = makeAIForDifficulty(difficulty);
   engine.newGame();
   engine.startRound();
   selectedDiscards.clear();
+  humanRaisesThisStreet = 0;
+  humanLastPhase = null;
+  hideCfrPanel();
+  hideAdviceBanner();
   render();
   setStatus("New game — pre-draw betting begins.");
   pushLog(`Round 1 dealt. ${engine.state.starter.name} posts 2b, ${engine.state.follower.name} posts 1b.`);
   sound.deal();
   advanceTurn();
+}
+
+function makeAIForDifficulty(d) {
+  if (d === "expert") {
+    const cfr = new CFRAIPlayer();
+    // Kick off strategy loading; the AI will fall back to uniform until ready.
+    cfr.ready().catch((err) => {
+      console.warn("[CFR] failed to load strategy, will fall back:", err);
+    });
+    return cfr;
+  }
+  return new AIPlayer(d);
 }
 $("new-game-btn").addEventListener("click", () => {
   sound.click();
@@ -542,6 +716,42 @@ $("sound-btn").addEventListener("click", () => {
   updateSoundIcon();
 });
 
+// Advice + reasoning toggles
+async function ensureHumanStrategyLoaded() {
+  if (humanStrategy) return humanStrategy;
+  try {
+    humanStrategy = await loadStrategy();
+  } catch (err) {
+    console.warn("[advice] failed to load CFR strategy:", err);
+    humanStrategy = null;
+  }
+  return humanStrategy;
+}
+
+const adviceToggle = $("advice-toggle");
+if (adviceToggle) {
+  adviceToggle.addEventListener("change", async (e) => {
+    adviceEnabled = e.target.checked;
+    try { localStorage.setItem("poker.advice", adviceEnabled ? "1" : "0"); } catch {}
+    if (adviceEnabled) {
+      await ensureHumanStrategyLoaded();
+      refreshAdvice();
+    } else {
+      hideAdviceBanner();
+    }
+  });
+}
+
+const reasoningToggle = $("reasoning-toggle");
+if (reasoningToggle) {
+  reasoningToggle.addEventListener("change", (e) => {
+    reasoningEnabled = e.target.checked;
+    try { localStorage.setItem("poker.reasoning", reasoningEnabled ? "1" : "0"); } catch {}
+    if (!reasoningEnabled) hideCfrPanel();
+    else maybeShowAiReasoning();
+  });
+}
+
 $("start-btn").addEventListener("click", () => {
   sound.resume();
   sound.start();
@@ -578,6 +788,17 @@ $("hero-rules-btn").addEventListener("click", () => {
       root.querySelectorAll(".seg-btn").forEach((b) => {
         b.classList.toggle("active", b.dataset.val === c);
       });
+    }
+    const adv = localStorage.getItem("poker.advice");
+    if (adv === "1") {
+      adviceEnabled = true;
+      if (adviceToggle) adviceToggle.checked = true;
+      ensureHumanStrategyLoaded();
+    }
+    const rea = localStorage.getItem("poker.reasoning");
+    if (rea === "1") {
+      reasoningEnabled = true;
+      if (reasoningToggle) reasoningToggle.checked = true;
     }
   } catch {}
   sound.loadPref();
