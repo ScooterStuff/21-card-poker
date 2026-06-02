@@ -22,7 +22,11 @@ This repo contains:
 ## Features (web version)
 
 - 🎨 Modern dark UI with glassmorphism, animated cards, and showdown reveal
-- 🎚️ **Difficulty selector** — Easy / Medium / Hard with distinct AI profiles
+- 🎚️ **Difficulty selector** — Easy / Medium / Hard / **Expert (CFR-trained)**
+- 🧠 **Expert AI** powered by an external-sampling MCCFR strategy trained in the
+  sibling repo [ScooterStuff/21-card-poker-cfr](https://github.com/ScooterStuff/21-card-poker-cfr)
+- 💡 **Show advice for me** — surfaces the optimal bet / discard from the CFR strategy
+- 🤖 **Show CFR reasoning** — reveals the Expert AI's action-probability distribution each turn
 - 🔊 **Sound FX** synthesized via Web Audio (no asset files), toggleable
 - 💰 Configurable starting chips (25b / 50b / 100b)
 - 🎴 Click-to-select discard, raise slider, live bet log, role pills (S/F)
@@ -71,9 +75,12 @@ web/                   # Vanilla JS web game (deployed to GitHub Pages)
   js/
     game.js            # Deck, betting, round flow
     hand_eval.js       # Hand ranking + Joker resolution
-    ai.js              # AI with Easy/Medium/Hard profiles
+    ai.js              # Heuristic AI with Easy/Medium/Hard profiles
+    cfr_ai.js          # CFR-trained Expert AI + advice helpers
     sound.js           # Web Audio FX engine
     main.js            # UI controller
+  data/
+    cfr_strategy.json  # Compact MCCFR strategy file (loaded at runtime)
 core/                  # Original Python desktop version
 analysis/              # Probability, discard, meta-strategy calculators
 data/                  # Generated CSV analysis outputs
