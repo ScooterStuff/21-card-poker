@@ -629,6 +629,77 @@ body {
 }
 .toggle input:checked + .toggle-track .toggle-thumb { transform: translateX(18px); }
 .toggle-label { font-weight: 600; font-size: 14px; }
+.toggle-hint { font-size: 11px; color: var(--text-dim); flex: 1; text-align: right; padding-left: 12px; }
+
+/* Difficulty seg has 4 buttons; let it auto-fit */
+#difficulty-seg { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 520px) {
+  #difficulty-seg { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Advice banner (shown to the human player when "Show advice" is on) */
+.advice-banner {
+  margin-top: 8px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(34,211,238,0.16), rgba(124,92,255,0.16));
+  border: 1px solid rgba(34,211,238,0.35);
+  color: #d8f6fe;
+  font-size: 13px;
+  text-align: center;
+  max-width: 540px;
+  margin-left: auto; margin-right: auto;
+}
+.advice-banner b { color: #fff; }
+
+/* Highlight the cards the advice recommends discarding */
+.card.advice-suggest {
+  outline: 2px dashed rgba(245, 196, 81, 0.85);
+  outline-offset: 2px;
+  filter: drop-shadow(0 0 12px rgba(245, 196, 81, 0.45));
+}
+
+/* CFR reasoning panel */
+.cfr-panel {
+  margin-top: 8px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(11, 15, 26, 0.65);
+  border: 1px solid rgba(124,92,255,0.45);
+  color: var(--text);
+  max-width: 540px;
+  margin-left: auto; margin-right: auto;
+  font-size: 12px;
+  backdrop-filter: blur(10px);
+}
+.cfr-panel-head {
+  display: flex; justify-content: space-between; align-items: center;
+  font-weight: 700; font-size: 12px; letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.cfr-source { font-weight: 500; color: var(--text-dim); font-size: 11px; }
+.cfr-bars { display: flex; flex-direction: column; gap: 4px; }
+.cfr-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 50px;
+  align-items: center;
+  gap: 8px;
+}
+.cfr-row .lbl { font-weight: 600; font-size: 12px; color: var(--text); }
+.cfr-row .lbl.pick { color: var(--gold); }
+.cfr-row .bar {
+  height: 8px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.cfr-row .bar > span {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 999px;
+}
+.cfr-row .pct { font-variant-numeric: tabular-nums; font-size: 11px; color: var(--text-dim); text-align: right; }
+.cfr-meta { margin-top: 6px; color: var(--text-dim); font-size: 11px; }
 
 .icon-btn { padding: 8px 12px; font-size: 16px; line-height: 1; }
 

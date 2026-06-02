@@ -42,6 +42,10 @@
                 <span class="seg-title">Hard</span>
                 <span class="seg-sub">Aggressive bluffer</span>
               </button>
+              <button class="seg-btn" data-val="expert" type="button">
+                <span class="seg-title">Expert</span>
+                <span class="seg-sub">CFR-trained</span>
+              </button>
             </div>
           </div>
 
@@ -60,6 +64,24 @@
               <span class="toggle-track"><span class="toggle-thumb"></span></span>
               <span class="toggle-label">Sound FX</span>
             </label>
+          </div>
+
+          <div class="menu-section row">
+            <label class="toggle">
+              <input type="checkbox" id="advice-toggle" />
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              <span class="toggle-label">Show advice for me</span>
+            </label>
+            <span class="toggle-hint">Suggest the optimal discard / bet using the CFR strategy.</span>
+          </div>
+
+          <div class="menu-section row">
+            <label class="toggle">
+              <input type="checkbox" id="reasoning-toggle" />
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              <span class="toggle-label">Show CFR reasoning</span>
+            </label>
+            <span class="toggle-hint">Reveal the Expert AI's action probabilities each turn.</span>
           </div>
 
           <div class="menu-actions">
@@ -109,6 +131,12 @@
             <div class="round-pill">Round <span id="round-num">0</span></div>
           </div>
           <div id="status-msg" class="status-msg">Press New Game to begin.</div>
+          <div id="advice-banner" class="advice-banner" hidden></div>
+          <div id="cfr-panel" class="cfr-panel" hidden>
+            <div class="cfr-panel-head"><span>🤖 CFR reasoning</span><span id="cfr-source" class="cfr-source"></span></div>
+            <div id="cfr-bars" class="cfr-bars"></div>
+            <div id="cfr-meta" class="cfr-meta"></div>
+          </div>
           <div id="log" class="log" aria-live="polite"></div>
         </section>
 
